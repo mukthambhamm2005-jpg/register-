@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Road Damage Detection</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            color: white;
+            margin-bottom: 40px;
+        }
+
+        header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .upload-section {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            margin-bottom: 30px;
+        }
+
+        .upload-area {
+            border: 3px dashed #667eea;
+            border-radius: 15px;
+            padding: 60px 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: #f8f9ff;
+        }
+
+        .upload-area:hover {
+            border-color: #764ba2;
+            background: #f0f2ff;
+        }
+
+        .upload-area.dragover {
+            border-color: #764ba2;
+            background: #e8ebff;
+            transform: scale(1.02);
+        }
+
+        .upload-icon {
+            font-size: 4rem;
+            margin-bottom: 20px;
+        }
+
+        .upload-text {
+            font-size: 1.2rem;
+            color: #555;
+            margin-bottom: 10px;
+        }
+
+        .upload-hint {
+            font-size: 0.9rem;
+            color: #888;
+        }
+
+        #file-input {
+            display: none;
+        }
+
+        .btn {
+            display: inline-block;
+            padding: 12px 30px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 25px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            margin-top: 20px;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 40px;
+        }
+
+        .loading.active {
+            display: block;
+        }
+
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .results-section {
+            display: none;
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+
+        .results-section.active {
+            display: block;
+        }
+
+        .results-header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .results-header h2 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .stats {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px 30px;
+            border-radius: 15px;
+            text-align: center;
+            min-width: 150px;
+        }
+
+        .stat-card h3 {
+            font-size: 2rem;
+            margin-bottom: 5px;
+        }
+
+        .stat-card p {
+            font-size: 0.9rem;
+            opacity: 0.9;
+        }
+
+        .images-comparison {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .image-box {
+            text-align: center;
+        }
+
+        .image-box h4 {
+            margin-bottom: 15px;
+            color: #555;
+        }
+
+        .image-box img {
+            max-width: 100%;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+
+        .detections-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        .detections-table th,
+        .detections-table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #eee;
+        }
+
+        .detections-table th {
+            background: #f8f9ff;
+            font-weight: 600;
+            color: #667eea;
+        }
+
+        .detections-table tr:hover {
+            background: #f8f9ff;
+        }
+
+        .confidence-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+
+        .confidence-high {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .confidence-medium {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .confidence-low {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .error-message {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 20px;
+            display: none;
+        }
+
+        .error-message.active {
+            display: block;
+        }
+
+        @media (max-width: 768px) {
+            .images-comparison {
+                grid-template-columns: 1fr;
+            }
+            
+            header h1 {
+                font-size: 1.8rem;
+            }
+            
+            .stats {
+                flex-direction: column;
+                align-items: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Road Damage Detection</h1>
+            <p>AI-powered road damage detection using Computer Vision</p>
+        </header>
+
+        <section class="upload-section">
+            <div class="upload-area" id="upload-area">
+                <div class="upload-icon">📤</div>
+                <div class="upload-text">Drop your image here or click to browse</div>
+                <div class="upload-hint">Supports: PNG, JPG, JPEG, GIF, BMP</div>
+                <input type="file" id="file-input" accept=".png,.jpg,.jpeg,.gif,.bmp">
+                <br>
+                <button class="btn" id="upload-btn" disabled>Analyze Image</button>
+            </div>
+            
+            <div class="loading" id="loading">
+                <div class="spinner"></div>
+                <p>Analyzing image... Please wait</p>
+            </div>
+            
+            <div class="error-message" id="error-message"></div>
+        </section>
+
+        <section class="results-section" id="results-section">
+            <div class="results-header">
+                <h2>Detection Results</h2>
+            </div>
+            
+            <div class="stats">
+                <div class="stat-card">
+                    <h3 id="num-detections">0</h3>
+                    <p>Damages Detected</p>
+                </div>
+            </div>
+            
+            <div class="images-comparison">
+                <div class="image-box">
+                    <h4>Original Image</h4>
+                    <img id="original-image" src="" alt="Original">
+                </div>
+                <div class="image-box">
+                    <h4>Detection Result</h4>
+                    <img id="result-image" src="" alt="Result">
+                </div>
+            </div>
+            
+            <h3 style="margin-bottom: 15px; color: #333;">Detected Damages</h3>
+            <table class="detections-table">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Class</th>
+                        <th>Confidence</th>
+                        <th>Bounding Box</th>
+                    </tr>
+                </thead>
+                <tbody id="detections-body">
+                </tbody>
+            </table>
+        </section>
+    </div>
+
+    <script>
+        const uploadArea = document.getElementById('upload-area');
+        const fileInput = document.getElementById('file-input');
+        const uploadBtn = document.getElementById('upload-btn');
+        const loading = document.getElementById('loading');
+        const resultsSection = document.getElementById('results-section');
+        const errorMessage = document.getElementById('error-message');
+        
+        let selectedFile = null;
+        
+        // Drag and drop
+        uploadArea.addEventListener('click', () => fileInput.click());
+        
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.classList.add('dragover');
+        });
+        
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.classList.remove('dragover');
+        });
+        
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+            
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                handleFile(files[0]);
+            }
+        });
+        
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                handleFile(e.target.files[0]);
+            }
+        });
+        
+        function handleFile(file) {
+            const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/gif', 'image/bmp'];
+            
+            if (!allowedTypes.includes(file.type)) {
+                showError('Invalid file type. Please upload an image file.');
+                return;
+            }
+            
+            selectedFile = file;
+            uploadBtn.disabled = false;
+            document.querySelector('.upload-text').textContent = `Selected: ${file.name}`;
+            errorMessage.classList.remove('active');
+        }
+        
+        uploadBtn.addEventListener('click', async () => {
+            if (!selectedFile) return;
+            
+            const formData = new FormData();
+            formData.append('file', selectedFile);
+            
+            loading.classList.add('active');
+            uploadBtn.disabled = true;
+            errorMessage.classList.remove('active');
+            resultsSection.classList.remove('active');
+            
+            try {
+                const response = await fetch('/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    displayResults(data);
+                } else {
+                    showError(data.error || 'An error occurred');
+                }
+            } catch (error) {
+                showError('Network error. Please try again.');
+            } finally {
+                loading.classList.remove('active');
+                uploadBtn.disabled = false;
+            }
+        });
+        
+        function displayResults(data) {
+            document.getElementById('num-detections').textContent = data.num_detections;
+            document.getElementById('original-image').src = data.original_image;
+            document.getElementById('result-image').src = data.result_image;
+            
+            const tbody = document.getElementById('detections-body');
+            tbody.innerHTML = '';
+            
+            data.detections.forEach((det, index) => {
+                const row = document.createElement('tr');
+                
+                const conf = parseFloat(det.confidence);
+                let confClass = 'confidence-low';
+                if (conf >= 0.8) confClass = 'confidence-high';
+                else if (conf >= 0.5) confClass = 'confidence-medium';
+                
+                row.innerHTML = `
+                    <td>${index + 1}</td>
+                    <td>${det.class}</td>
+                    <td><span class="confidence-badge ${confClass}">${det.confidence}</span></td>
+                    <td>[${det.bbox.join(', ')}]</td>
+                `;
+                
+                tbody.appendChild(row);
+            });
+            
+            resultsSection.classList.add('active');
+            resultsSection.scrollIntoView({ behavior: 'smooth' });
+        }
+        
+        function showError(message) {
+            errorMessage.textContent = message;
+            errorMessage.classList.add('active');
+        }
+    </script>
+</body>
+</html>
+
